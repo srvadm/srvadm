@@ -1,0 +1,111 @@
+version: '3.6'
+
+services:
+  cli:
+    image: srvadm/mail:cli-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  dovecot:
+    image: srvadm/mail:dovecot-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - traefik-public
+      - default
+    ports:
+      - 143:143
+      - 993:993
+      - 110:110
+      - 995:995
+    volumes:
+      - mail:/var/vmail
+      - ../../volumes/certificates/$DOMAIN:/etc/ssl/dovecot/
+  
+  mysql:
+    image: srvadm/mail:mysql-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - mysql_data:/var/lib/mysql
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+
+  nginx:
+    image: srvadm/mail:nginx-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - type: volume
+        source: www
+        target: /var/www
+        volume:
+          nocopy: true
+    networks:
+      - traefik-public
+      - default
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.rule=Host(`${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.middlewares=redirect-to-https@docker
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.entrypoints=http
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.entrypoints=https
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.certresolver=http
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].main=$DOMAIN
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].sans=$DOMAIN,mail.$DOMAIN,webmail.$DOMAIN,imap.$DOMAIN,smtp.$DOMAIN,autoconfig.$DOMAIN,autodiscover.$DOMAIN
+        - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80
+
+  php:
+    image: srvadm/mail:php-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - www:/var/www
+
+  postfix:
+    image: srvadm/mail:postfix-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - traefik-public
+      - default
+    ports:
+      - 025:025
+      - 587:587
+    volumes:
+      - ../../volumes/certificates/$DOMAIN:/etc/ssl/postfix/
+
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis:/data
+
+  rspamd:
+    image: srvadm/mail:rspamd-dev
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - rspamd:/var/lib/rspamd
+
+volumes:
+  mail:
+  mysql_data:
+  postfix:
+  rspamd:
+  redis:
+  www:
+
+networks:
+  traefik-public:
+    external: true
+  default:
+    driver: overlay
