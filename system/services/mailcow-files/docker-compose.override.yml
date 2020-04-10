@@ -1,0 +1,20 @@
+version: '2.1'
+services:
+  nginx-mailcow:
+    expose:
+      - 80
+    networks:
+      - traefik-public
+      - mailcow-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=80"
+      - "traefik.http.routers.mx.rule=Host(`${MAILCOW_HOSTNAME}`${ADD_DOMAINS})"
+      - "traefik.http.routers.mx.middlewares=redirect-to-https@docker"
+      - "traefik.http.routers.mx-ssl.tls=true"
+      - "traefik.http.routers.mx-ssl.rule=Host(`${MAILCOW_HOSTNAME}`)"
+      - "traefik.http.routers.mx-ssl.tls.certresolver=http"
+
+networks:
+  traefik-public:
+    external: true

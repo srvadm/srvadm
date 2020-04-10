@@ -1,0 +1,182 @@
+# Swarm workaround
+# - switch ports-mode from "overlay" "host"
+# - add "endpoint_mode: dnsrr" in deploy section of fromt service
+# 
+
+version: '3.6'
+
+services:
+# External dependencies
+  redis:
+    image: redis:alpine
+    volumes:
+      - redis_data:/data
+
+# Core services
+  front:
+    image: ${DOCKER_ORG:-mailu}/${DOCKER_PREFIX:-}nginx:${MAILU_VERSION:-master}
+    env_file: .env
+    logging:
+      driver: json-file
+    ports:
+      - target: 25
+        published: 25
+        mode: host
+      - target: 465
+        published: 465
+        mode: host
+      - target: 587
+        published: 587
+        mode: host
+      - target: 110
+        published: 110
+        mode: host
+      - target: 995
+        published: 995
+        mode: host
+      - target: 143
+        published: 143
+        mode: host
+      - target: 993
+        published: 993
+        mode: host
+    volumes:
+      - mailu-certificates:/certs
+      - ./overrides/nginx:/overrides
+    networks:
+      - traefik-public
+      - default
+    deploy:
+      replicas: 1
+      endpoint_mode: dnsrr
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.mailu-http.rule=Host(`mail.$DOMAIN`)
+        - traefik.http.routers.mailu-http.entrypoints=http
+        - traefik.http.routers.mailu-http.middlewares=redirect-to-https@docker
+        - traefik.http.routers.mailu-https.tls=true
+        - traefik.http.routers.mailu-https.tls.certresolver=http
+        - traefik.http.routers.mailu-https.entrypoints=https
+        - traefik.http.routers.mailu-https.rule=Host(`mail.$DOMAIN`)
+        - traefik.http.services.mailu.loadbalancer.server.port=80
+        - traefik.http.routers.mailu-https.tls.domains[0].main=$DOMAIN
+        - traefik.http.routers.mailu-https.tls.domains[0].sans=$HOSTNAMES,mail.$DOMAIN,webmail.$DOMAIN,imap.$DOMAIN,smtp.$DOMAIN,dav.$DOMAIN
+    healthcheck:
+      disable: true
+
+  admin:
+    image: ${DOCKER_ORG:-mailu}/${DOCKER_PREFIX:-}admin:${MAILU_VERSION:-master}
+    env_file: .env
+    volumes:
+      - ./data:/data
+      - ./dkim:/dkim
+    deploy:
+      replicas: 1
+    healthcheck:
+      disable: true
+
+  imap:
+    image: ${DOCKER_ORG:-mailu}/${DOCKER_PREFIX:-}dovecot:${MAILU_VERSION:-master}
+    env_file: .env
+    volumes:
+      - ./mail:/mail
+      - ./overrides:/overrides
+    deploy:
+      replicas: 1
+
+  smtp:
+    image: ${DOCKER_ORG:-mailu}/${DOCKER_PREFIX:-}postfix:${MAILU_VERSION:-master}
+    env_file: .env
+    volumes:
+      - ./mailqueue:/queue
+      - ./overrides:/overrides
+    deploy:
+      replicas: 1
+
+  antispam:
+    image: ${DOCKER_ORG:-mailu}/${DOCKER_PREFIX:-}rspamd:${MAILU_VERSION:-master}
+    env_file: .env
+    volumes:
+      - ./filter:/var/lib/rspamd
+      - ./dkim:/dkim
+      - ./overrides/rspamd:/etc/rspamd/override.d
+    deploy:
+      replicas: 1
+
+  # Optional services
+
+  antivirus:
+    image: ${DOCKER_ORG:-mailu}/${DOCKER_PREFIX:-}clamav:${MAILU_VERSION:-master}
+    env_file: .env
+    volumes:
+      - ./filter:/data
+    deploy:
+      replicas: 1
+
+  webdav:
+    image: ${DOCKER_ORG:-mailu}/${DOCKER_PREFIX:-}radicale:${MAILU_VERSION:-master}
+    env_file: .env
+    volumes:
+      - ./dav:/data
+    deploy:
+      replicas: 1
+
+  fetchmail:
+    image: ${DOCKER_ORG:-mailu}/${DOCKER_PREFIX:-}fetchmail:${MAILU_VERSION:-master}
+    env_file: .env
+    volumes:
+      - ./data:/data
+    deploy:
+      replicas: 1
+
+  webmail:
+    image: ${DOCKER_ORG:-mailu}/${DOCKER_PREFIX:-}${WEBMAIL:-master}:${MAILU_VERSION:-master}
+    env_file: .env
+    volumes:
+      - ./webmail:/data
+    deploy:
+      replicas: 1
+    healthcheck:
+      disable: true   # nur für rainloop notwendig
+
+  certdumper:
+    restart: always
+    image: mailu/traefik-certdumper:${MAILU_VERSION:-master}
+    environment:
+      - DOMAIN=$DOMAIN
+    volumes:
+      - traefik-certificates:/traefik
+      - mailu-certificates:/output
+
+  mysql:
+    image: srvadm/mysql
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - default
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PW}
+      - MYSQL_DATABASE=${DB_NAME}
+
+volumes:
+  traefik-certificates:
+    name: traefik-certificates
+  mailu-certificates:
+    name: mailu-certificates
+  mysql_data:
+  redis_data:
+
+networks:
+  traefik-public:
+    external: true
+  default:
+    driver: overlay
+    ipam:
+      driver: default
+      config:
+        - subnet: ${SUBNET:-10.0.87.0/24}

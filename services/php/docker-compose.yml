@@ -1,0 +1,15 @@
+version: '3.6'
+
+services:
+  php:
+    image: srvadm/php:7.2
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - www_data:/var/www:rw
+    networks:
+      - default
+
+volumes:
+  www_data:

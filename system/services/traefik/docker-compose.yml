@@ -1,0 +1,73 @@
+version: '3'
+
+services:
+  traefik:
+    image: traefik:v2.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - traefik-certificates:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - traefik-public
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+#        - traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)
+#        - traefik.http.routers.http-catchall.entrypoints=http
+#        - traefik.http.routers.http-catchall.middlewares=redirect-to-https@docker
+        - traefik.http.routers.api-http.rule=Host(`${domain}`)
+        - traefik.http.routers.api-http.entrypoints=http
+        - traefik.http.routers.api-http.middlewares=redirect-to-https@docker
+        - traefik.http.routers.api-https.entrypoints=https
+        - traefik.http.routers.api-https.tls.certresolver=http
+        - traefik.http.routers.api-https.rule=Host(`${domain}`)
+        - traefik.http.routers.api-https.service=api@internal
+        - traefik.http.routers.api-https.middlewares=auth
+        - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+        - traefik.http.middlewares.auth.basicauth.users=${auth_username}:${auth_pw}
+        - traefik.http.services.api.loadbalancer.server.port=9999 # Dummy service for Swarm port detection.
+#      - traefik.http.middlewares.https.SSLRedirect=true
+#      - traefik.http.middlewares.https.STSSeconds=315360000
+#      - traefik.http.middlewares.https.browserXSSFilter=true
+#      - traefik.http.middlewares.https.contentTypeNosniff=true
+#      - traefik.http.middlewares.https.forceSTSHeader=true
+#      - traefik.http.middlewares.https.SSLHost=file.${DOMAIN}
+#      - traefik.http.middlewares.https.STSIncludeSubdomains=true
+#      - traefik.http.middlewares.https.STSPreload=true
+#      - traefik.http.middlewares.https.frameDeny=true
+    command: >
+      --api=true
+      --global.sendAnonymousUsage=false
+      --providers.docker.endpoint=unix:///var/run/docker.sock
+      --providers.docker.swarmMode=true
+      --providers.docker.exposedbydefault=false
+      --providers.docker.network=traefik-public
+      --entrypoints.http.address=:80
+      --entrypoints.https.address=:443
+      --certificatesresolvers.http.acme.httpchallenge=true
+      --certificatesresolvers.http.acme.httpchallenge.entrypoint=http
+      --certificatesresolvers.http.acme.email=${email}
+      --certificatesresolvers.http.acme.storage=/letsencrypt/acme.json
+      --certificatesresolvers.dns.acme.dnsChallenge=true
+      --certificatesresolvers.dns.acme.dnsChallenge.provider=netcup
+      --certificatesresolvers.dns.acme.dnsChallenge.delayBeforeCheck=600
+      --certificatesresolvers.dns.acme.email=${email}
+      --certificatesresolvers.dns.acme.storage=/letsencrypt/acme.json
+      --certificatesresolvers.http.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+      --certificatesresolvers.dns.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+
+volumes:
+  traefik-certificates:
+    name: traefik-certificates
+
+networks:
+  traefik-public:
+    external: true

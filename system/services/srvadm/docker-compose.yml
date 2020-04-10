@@ -1,0 +1,58 @@
+version: '3.6'
+
+services:
+  mysql:
+    image: srvadm/system:mysql
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - default
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=yes
+      - MYSQL_USER=${mysql_user}
+      - MYSQL_PASSWORD=${mysql_pw}
+      - MYSQL_DATABASE=${mysql_db}
+# SHOW VARIABLES WHERE Variable_name LIKE 'character\_set\_%' OR Variable_name LIKE 'collation%';
+
+  php:
+    image: srvadm/system:php
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - www_data:/var/www:rw
+    depends_on:
+      - mysql
+
+  nginx:
+    image: srvadm/system:nginx
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - www_data:/var/www:rw
+    networks:
+      - traefik-public
+      - default
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${domain}`)"
+        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.middlewares=redirect-to-https@docker"
+        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_secure.rule=Host(`${domain}`)"
+        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_secure.entrypoints=websecure"
+        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_secure.tls.certresolver=http"
+        - "traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80"
+    depends_on:
+      - php
+
+volumes:
+  mysql_data:
+  www_data:
+
+networks:
+  traefik-public:
+    external: true

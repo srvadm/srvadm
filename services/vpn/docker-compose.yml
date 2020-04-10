@@ -1,0 +1,21 @@
+version: '2'
+services:
+  openvpn:
+    cap_add:
+     - NET_ADMIN
+    image: kylemanna/openvpn
+    container_name: openvpn
+    restart: always
+    volumes:
+     - ./openvpn-data/conf:/etc/openvpn
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.services.${COMPOSE_PROJECT_NAME}.loadBalancer.server.port=1194"
+      - "traefik.tcp.routers.${COMPOSE_PROJECT_NAME}.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.${COMPOSE_PROJECT_NAME}.entrypoints=websecure"
+
+networks:
+  traefik-public:
+    external: true
