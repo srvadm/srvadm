@@ -51,10 +51,10 @@ services:
     deploy:
       labels:
         - traefik.enable=true
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.rule=Host(`${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.rule=Host(`webmail.${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.middlewares=redirect-to-https@docker
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.entrypoints=http
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`webmail.${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.entrypoints=https
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.certresolver=http
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].main=$DOMAIN
