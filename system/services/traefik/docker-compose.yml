@@ -31,14 +31,14 @@ services:
         - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
         - traefik.http.middlewares.auth.basicauth.users=${AUTH_USER}:${AUTH_PWD}
         - traefik.http.services.api.loadbalancer.server.port=9999 # Dummy service for Swarm port detection.
-        - traefik.http.middlewares.https.SSLRedirect=true
-        - traefik.http.middlewares.https.STSSeconds=315360000
-        - traefik.http.middlewares.https.browserXSSFilter=true
-        - traefik.http.middlewares.https.contentTypeNosniff=true
-        - traefik.http.middlewares.https.forceSTSHeader=true
-        - traefik.http.middlewares.https.STSIncludeSubdomains=true
-        - traefik.http.middlewares.https.STSPreload=true
-        - traefik.http.middlewares.https.frameDeny=true
+#        - traefik.http.middlewares.https.STSSeconds=315360000
+#        - traefik.http.middlewares.https.browserXSSFilter=true
+#        - traefik.http.middlewares.https.contentTypeNosniff=true
+#        - traefik.http.middlewares.https.forceSTSHeader=true
+#        - traefik.http.middlewares.https.frameDeny=true
+#        - traefik.http.middlewares.https.STSIncludeSubdomains=true
+#        - traefik.http.middlewares.https.STSPreload=true
+#        - traefik.http.middlewares.https.SSLRedirect=true
 #        - traefik.http.middlewares.https.SSLHost=file.${DOMAIN}
     command: >
       --api=true
@@ -65,7 +65,7 @@ services:
     image: ldez/traefik-certs-dumper:v2.7.0
     restart: unless-stopped
     volumes:
-      - ../../volumes/traefik_certificates/:/in
+      - ../../volumes/acme/:/in
       - ../../volumes/certificates/:/out
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
