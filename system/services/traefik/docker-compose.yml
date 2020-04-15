@@ -2,7 +2,7 @@ version: '3'
 
 services:
   traefik:
-    image: traefik:v2.0
+    image: traefik:v2.2
     restart: unless-stopped
     env_file:
       - .env
@@ -13,6 +13,7 @@ services:
       - 443:443
     volumes:
       - ../../volumes/acme:/letsencrypt
+      - ../../volumes/traefik_config:/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
       placement:
@@ -31,19 +32,22 @@ services:
         - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
         - traefik.http.middlewares.auth-${COMPOSE_PROJECT_NAME}.basicauth.users=${AUTH_USER}:${AUTH_PWD}
         - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=9999 # Dummy service for Swarm port detection.
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls@file
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].main=${DOMAIN}
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].sans=*.${DOMAIN}
-#        - traefik.http.middlewares.https.STSSeconds=315360000
-#        - traefik.http.middlewares.https.browserXSSFilter=true
-#        - traefik.http.middlewares.https.contentTypeNosniff=true
-#        - traefik.http.middlewares.https.forceSTSHeader=true
-#        - traefik.http.middlewares.https.frameDeny=true
-#        - traefik.http.middlewares.https.STSIncludeSubdomains=true
-#        - traefik.http.middlewares.https.STSPreload=true
-#        - traefik.http.middlewares.https.SSLRedirect=true
-#        - traefik.http.middlewares.https.SSLHost=file.${DOMAIN}
+        - traefik.http.middlewares.https.headers.STSSeconds=315360000
+        - traefik.http.middlewares.https.headers.browserXSSFilter=true
+        - traefik.http.middlewares.https.headers.contentTypeNosniff=true
+        - traefik.http.middlewares.https.headers.forceSTSHeader=true
+        - traefik.http.middlewares.https.headers.frameDeny=true
+        - traefik.http.middlewares.https.headers.STSIncludeSubdomains=true
+        - traefik.http.middlewares.https.headers.STSPreload=true
+        - traefik.http.middlewares.https.headers.SSLRedirect=true
+#        - traefik.http.middlewares.https.headers.SSLHost=file.${DOMAIN}
     command: >
       --api=true
+      --providers.file.directory=/config/
+      --providers.file.watch=true
       --global.sendAnonymousUsage=false
       --providers.docker.endpoint=unix:///var/run/docker.sock
       --providers.docker.swarmMode=true

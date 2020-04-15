@@ -1,6 +1,25 @@
 # fill .env files
 
-sudo mkdir -p /opt/srvadm/system/volumes/{acme,certificates}/
+sudo mkdir -p /opt/srvadm/system/volumes/{acme,certificates,traefik_config}/
+cat << EOF > /opt/srvadm/system/volumes/traefik_config/default-tls
+tls:
+  options:
+    default-tls:
+      minVersion: VersionTLS12
+      clientAuth:
+        clientAuthType: RequireAnyClientCert
+      sniStrict: true
+      cipherSuites:
+        - TLS_AES_128_GCM_SHA256
+        - TLS_AES_256_GCM_SHA384
+        - TLS_CHACHA20_POLY1305_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+EOF
 
 # install Traefik Proxy
 docker network create --driver=overlay --attachable traefik-public
@@ -14,28 +33,3 @@ docker stack deploy -c <(docker-compose --project-directory /opt/srvadm/system/s
 docker stack deploy -c <(docker-compose --project-directory /opt/srvadm/system/services/mail/ -f /opt/srvadm/system/services/mail/docker-compose.yml config) mail
 
 docker run gilleslamiral/imapsync imapsync --host1="m02.srvadm.de" --user1="dev@m02.srvadm.de" --password1="dev" –-host2="m01.srvadm.de" --user2="dev@m01.srvadm.de" –-password2="dev"
-
-
-
-
-  cert-dumper:
-    image: ldez/traefik-certs-dumper:v2.7.0
-    restart: unless-stopped
-    volumes:
-      - ../../volumes/acme/:/in
-      - ../../volumes/certificates/:/out
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    deploy:
-      placement:
-        constraints:
-          - node.role == manager
-    command: >
-      file
-      --source=/in/acme.json
-      --dest /out
-      --watch
-      --version=v2
-      --domain-subdir=true
-#      --clean=false
-#      --post-hook=/hook.sh
-#curl -XPOST --unix-socket /var/run/docker.sock -H 'Content-Type: application/json' http://localhost/containers/${COMTAINER-ID}/restart
