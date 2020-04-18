@@ -1,24 +1,22 @@
 # fill .env files
 
 sudo mkdir -p /opt/srvadm/system/volumes/{acme,certificates,traefik_config}/
-cat << EOF > /opt/srvadm/system/volumes/traefik_config/default-tls
+sudo cat << EOF > /opt/srvadm/system/volumes/traefik_config/default-tls
 tls:
   options:
     default-tls:
-      minVersion: VersionTLS12
-      clientAuth:
-        clientAuthType: RequireAnyClientCert
       sniStrict: true
+      minVersion: VersionTLS12
       cipherSuites:
         - TLS_AES_128_GCM_SHA256
-        - TLS_AES_256_GCM_SHA384
         - TLS_CHACHA20_POLY1305_SHA256
-        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_AES_256_GCM_SHA384
         - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
         - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-        - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
         - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+      preferServerCipherSuites: true
+      curvePreferences:
+        - secp384r1
 EOF
 
 # install Traefik Proxy

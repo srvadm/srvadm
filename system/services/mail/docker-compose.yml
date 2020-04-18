@@ -57,6 +57,7 @@ services:
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`webmail.${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.entrypoints=https
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.certresolver=http
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls@file
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].main=${DOMAIN}
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].sans=${DOMAIN},mail.${DOMAIN},webmail.${DOMAIN},imap.${DOMAIN},smtp.${DOMAIN},autoconfig.${DOMAIN},autodiscover.${DOMAIN}
         - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80
