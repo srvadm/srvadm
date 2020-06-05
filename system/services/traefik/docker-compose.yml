@@ -32,7 +32,7 @@ services:
         - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
         - traefik.http.middlewares.auth-${COMPOSE_PROJECT_NAME}.basicauth.users=${AUTH_USER}:${AUTH_PWD}
         - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=9999 # Dummy service for Swarm port detection.
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls@file
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].main=${DOMAIN}
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].sans=*.${DOMAIN}
         - traefik.http.middlewares.https.headers.STSSeconds=315360000
