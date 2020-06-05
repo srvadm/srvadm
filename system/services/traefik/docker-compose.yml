@@ -12,8 +12,8 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - ../../volumes/acme:/letsencrypt
-      - ../../volumes/traefik_config:/config
+      - ../../volumes/traefik/acme:/letsencrypt
+      - ../../volumes/traefik/config:/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
       placement:
@@ -25,14 +25,14 @@ services:
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.entrypoints=http
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.middlewares=redirect-to-https@docker
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.entrypoints=https
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.certresolver=http
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.certresolver=dns
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`traefik.${DOMAIN}`)
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.service=api@internal
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.middlewares=auth-${COMPOSE_PROJECT_NAME}
         - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
         - traefik.http.middlewares.auth-${COMPOSE_PROJECT_NAME}.basicauth.users=${AUTH_USER}:${AUTH_PWD}
         - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=9999 # Dummy service for Swarm port detection.
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls@file
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].main=${DOMAIN}
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].sans=*.${DOMAIN}
         - traefik.http.middlewares.https.headers.STSSeconds=315360000
@@ -46,7 +46,7 @@ services:
 #        - traefik.http.middlewares.https.headers.SSLHost=file.${DOMAIN}
     command: >
       --api=true
-      --providers.file.directory=/config/
+      --providers.file.directory=/config
       --providers.file.watch=true
       --global.sendAnonymousUsage=false
       --providers.docker.endpoint=unix:///var/run/docker.sock
@@ -71,8 +71,8 @@ services:
     image: ldez/traefik-certs-dumper:v2.7.0
     restart: unless-stopped
     volumes:
-      - ../../volumes/acme/:/in
-      - ../../volumes/certificates/:/out
+      - ../../volumes/traefik/acme/:/in
+      - ../../volumes/traefik/certificates/:/out
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
       placement:

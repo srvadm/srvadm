@@ -21,8 +21,8 @@ services:
       - 110:110
       - 995:995
     volumes:
-      - mail:/var/vmail
-      - ../../volumes/certificates/${DOMAIN}:/etc/ssl/dovecot/
+      - ../../volumes/mail/data:/var/vmail
+      - ../../volumes/traefik/certificates/${DOMAIN}:/etc/ssl/dovecot/
   
   mysql:
     image: srvadm/mail:mysql-dev
@@ -30,7 +30,7 @@ services:
     env_file:
       - .env
     volumes:
-      - mysql_data:/var/lib/mysql
+      - ../../volumes/mail/mysql:/var/lib/mysql
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=yes
 
@@ -41,7 +41,7 @@ services:
       - .env
     volumes:
       - type: volume
-        source: www
+        source: ../../volumes/mail/www
         target: /var/www
         volume:
           nocopy: true
@@ -68,7 +68,7 @@ services:
     env_file:
       - .env
     volumes:
-      - www:/var/www
+      - ../../volumes/mail/www:/var/www
 
   postfix:
     image: srvadm/mail:postfix-dev
@@ -82,12 +82,12 @@ services:
       - 025:025
       - 587:587
     volumes:
-      - ../../volumes/certificates/${DOMAIN}:/etc/ssl/postfix/
+      - ../../volumes/traefik/certificates/${DOMAIN}:/etc/ssl/postfix/
 
   redis:
     image: redis:alpine
     volumes:
-      - redis:/data
+      - ../../volumes/mail/redis:/data
 
   rspamd:
     image: srvadm/mail:rspamd-dev
@@ -95,15 +95,7 @@ services:
     env_file:
       - .env
     volumes:
-      - rspamd:/var/lib/rspamd
-
-volumes:
-  mail:
-  mysql_data:
-  postfix:
-  rspamd:
-  redis:
-  www:
+      - ../../volumes/mail/rspamd:/var/lib/rspamd
 
 networks:
   traefik-public:

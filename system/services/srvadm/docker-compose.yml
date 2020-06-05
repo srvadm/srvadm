@@ -2,7 +2,7 @@ version: '3.6'
 
 services:
   mysql:
-    image: srvadm/system:mysql
+    image: srvadm/system:mysql-dev
     env_file:
       - .env
     volumes:
@@ -14,44 +14,40 @@ services:
 # SHOW VARIABLES WHERE Variable_name LIKE 'character\_set\_%' OR Variable_name LIKE 'collation%';
 
   php:
-    image: srvadm/system:php
+    image: srvadm/system:php-dev
     env_file:
       - .env
     volumes:
       - www:/var/www
-      - configs:/var/configs
-      - logs:/var/logs
 
   nginx:
-    image: srvadm/system:nginx
+    image: srvadm/system:nginx-dev
     env_file:
       - .env
     volumes:
       - www:/var/www
-      - configs:/var/configs
-      - logs:/var/logs
     networks:
       - traefik-public
       - default
     environment:
-      - WWW_ROOT=/var/www/html
+      - WWW_ROOT=/var/www/html/public
       - PHP_HOST=php
       - PHP_PORT=9000
     deploy:
       labels:
-        - "traefik.enable=true"
-        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${domain}`)"
-        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}.middlewares=redirect-to-https@docker"
-        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_secure.rule=Host(`${domain}`)"
-        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_secure.entrypoints=websecure"
-        - "traefik.http.routers.${COMPOSE_PROJECT_NAME}_secure.tls.certresolver=http"
-        - "traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80"
+        - traefik.enable=true
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.rule=Host(`${DOMAIN}`)
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.middlewares=redirect-to-https@docker
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.entrypoints=http
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`${DOMAIN}`)
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.entrypoints=https
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.certresolver=http
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls@file
+        - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80
 
 volumes:
   mysql:
   www:
-  configs:
-  logs:
 
 networks:
   traefik-public:
