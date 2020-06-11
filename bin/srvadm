@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+if [ -z $1 ]
+then
+  rental="*** Unknown vehicle ***"
+elif [ -n $1 ]
+then
+# otherwise make first arg as a rental
+  rental=$1
+fi
+
+# use case statement to make decision for rental
+case $rental in
+   "domain") echo "For $rental rental is Rs.20 per k/m.";;
+   "mail") echo "For $rental rental is Rs.10 per k/m.";;
+   *) echo "Usage Domain | Mail";;
+esac

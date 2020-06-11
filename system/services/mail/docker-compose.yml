@@ -30,7 +30,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ../../volumes/mail/mysql:/var/lib/mysql
+      - mysql:/var/lib/mysql
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=yes
 
@@ -40,11 +40,7 @@ services:
     env_file:
       - .env
     volumes:
-      - type: volume
-        source: ../../volumes/mail/www
-        target: /var/www
-        volume:
-          nocopy: true
+      - ../../volumes/mail/www:/var/www
     networks:
       - traefik-public
       - default
@@ -96,6 +92,9 @@ services:
       - .env
     volumes:
       - ../../volumes/mail/rspamd:/var/lib/rspamd
+
+volumes:
+  mysql:
 
 networks:
   traefik-public:

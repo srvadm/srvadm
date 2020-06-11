@@ -1,0 +1,17 @@
+version: "3.3"
+
+services:
+  backup:
+    image: mazzolino/restic
+    environment:
+      RESTIC_BACKUP_SOURCES: /mnt/volumes
+    hostname: "{{.Node.ID}}"
+    volumes:
+      - /opt/srvadm:/mnt/volumes/srvadm:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      mode: global
+
+  prune:
+    image: mazzolino/restic
+    hostname: docker
