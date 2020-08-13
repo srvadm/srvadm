@@ -21,8 +21,8 @@ services:
       - 110:110
       - 995:995
     volumes:
-      - ../../volumes/mail/data:/var/vmail
-      - ../../volumes/traefik/certificates/${DOMAIN}:/etc/ssl/dovecot/
+      - ../../data/${COMPOSE_PROJECT_NAME}/data:/var/vmail
+      - ../../data/${TRAEFIK_COMPOSE_PROJECT_NAME}/certificates/${DOMAIN}:/etc/ssl/dovecot/
   
   mysql:
     image: srvadm/mail:mysql-dev
@@ -40,22 +40,19 @@ services:
     env_file:
       - .env
     volumes:
-      - ../../volumes/mail/www:/var/www
+      - ../../data/${COMPOSE_PROJECT_NAME}/www:/var/www
     networks:
       - traefik-public
       - default
     deploy:
       labels:
         - traefik.enable=true
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.rule=Host(`webmail.${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.middlewares=redirect-to-https@docker
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.entrypoints=http
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`webmail.${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.entrypoints=https
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.certresolver=http
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls@file
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].main=${DOMAIN}
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].sans=${DOMAIN},mail.${DOMAIN},webmail.${DOMAIN},imap.${DOMAIN},smtp.${DOMAIN},autoconfig.${DOMAIN},autodiscover.${DOMAIN}
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`webmail.${DOMAIN}`,`autoconfig.${DOMAIN}`,`autodiscover.${DOMAIN}`)
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=https
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=http
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.options=default-tls@file
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.domains[0].main=${DOMAIN}
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.domains[0].sans=${DOMAIN},mail.${DOMAIN},webmail.${DOMAIN},imap.${DOMAIN},smtp.${DOMAIN},autoconfig.${DOMAIN},autodiscover.${DOMAIN}
         - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80
 
   php:
@@ -64,7 +61,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ../../volumes/mail/www:/var/www
+      - ../../data/${COMPOSE_PROJECT_NAME}/www:/var/www
 
   postfix:
     image: srvadm/mail:postfix-dev
@@ -78,12 +75,12 @@ services:
       - 025:025
       - 587:587
     volumes:
-      - ../../volumes/traefik/certificates/${DOMAIN}:/etc/ssl/postfix/
+      - ../../data/${TRAEFIK_COMPOSE_PROJECT_NAME}/certificates/${DOMAIN}:/etc/ssl/postfix/
 
   redis:
     image: redis:alpine
     volumes:
-      - ../../volumes/mail/redis:/data
+      - ../../data/${COMPOSE_PROJECT_NAME}/redis:/data
 
   rspamd:
     image: srvadm/mail:rspamd-dev
@@ -91,7 +88,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ../../volumes/mail/rspamd:/var/lib/rspamd
+      - ../../data/${COMPOSE_PROJECT_NAME}/rspamd:/var/lib/rspamd
 
 volumes:
   mysql:

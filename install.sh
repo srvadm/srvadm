@@ -125,5 +125,14 @@ docker stack deploy -c <(docker-compose --project-directory /opt/srvadm/system/s
 docker stack deploy -c <(docker-compose --project-directory /opt/srvadm/system/services/jitsi/ -f /opt/srvadm/system/services/jitsi/docker-compose.yml config) jitsi
 docker stack deploy -c <(docker-compose --project-directory /opt/srvadm/system/services/swarmprom/ -f /opt/srvadm/system/services/swarmprom/docker-compose.yml config) swarmprom
 
+docker stack deploy -c <(docker-compose --project-directory /opt/srvadm/system/services/portainer/ -f /opt/srvadm/system/services/portainer/docker-compose.yml config) portainer
+docker stack deploy -c <(docker-compose --project-directory /opt/srvadm/system/services/thediver/ -f /opt/srvadm/system/services/thediver/docker-compose.yml config) thediver
+
+docker stack deploy -c <(docker-compose --project-directory /opt/srvadm/system/services/restic/ -f /opt/srvadm/system/services/restic/docker-compose.yml config) restic
+
+
+echo TRAEFIK_PROXY_NETWORK=$(docker network inspect traefik-public --format='{{(index .IPAM.Config 0).Gateway}}') >> /opt/srvadm/services/nextcloud/.env
+docker stack deploy -c <(docker-compose --project-directory /opt/srvadm/services/nextcloud/ -f /opt/srvadm/services/nextcloud/docker-compose.yml config) cloud_thediver_info
+
 
 docker exec --user www-data nextcloud_nextcloud.1.kr2dsyisw426evzx7nk1z7i2r php occ

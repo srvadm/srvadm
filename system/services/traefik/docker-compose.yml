@@ -21,6 +21,10 @@ services:
           - node.role == manager
       labels:
         - traefik.enable=true
+        - traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)
+        - traefik.http.routers.http-catchall.entrypoints=http
+        - traefik.http.routers.http-catchall.middlewares=redirect-to-https
+        - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.rule=Host(`traefik.${DOMAIN}`)
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.entrypoints=http
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.middlewares=redirect-to-https@docker
@@ -29,7 +33,6 @@ services:
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`traefik.${DOMAIN}`)
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.service=api@internal
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.middlewares=auth-${COMPOSE_PROJECT_NAME}
-        - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
         - traefik.http.middlewares.auth-${COMPOSE_PROJECT_NAME}.basicauth.users=${AUTH_USER}:${AUTH_PWD}
         - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=9999 # Dummy service for Swarm port detection.
         - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls@file
@@ -64,6 +67,9 @@ services:
       --certificatesresolvers.dns.acme.dnsChallenge.delayBeforeCheck=600
       --certificatesresolvers.dns.acme.email=${EMAIL}
       --certificatesresolvers.dns.acme.storage=/letsencrypt/acme.json
+      --certificatesresolvers.tls.acme.email=${EMAIL}
+      --certificatesresolvers.tls.acme.storage=/letsencrypt/acme.json
+      --certificatesresolvers.tls.acme.tlschallenge=true
 #      --certificatesresolvers.http.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
 #      --certificatesresolvers.dns.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
 

@@ -1,10 +1,10 @@
-version: '3'
-
+version: "3.7"
+ 
 services:
   mysql:
-    image: srvadm/srvadm:mysql-dev
+    image: srvadm/system:mysql-dev
     env_file:
-      - .env
+      - ../../data/${COMPOSE_PROJECT_NAME}/.env
     volumes:
       - mysql:/var/lib/mysql
     environment:
@@ -15,67 +15,81 @@ services:
     volumes:
       - redis:/data
 
-  nextcloud:
-    image: nextcloud:18-fpm-alpine
-    env_file:
-      - .env
-    volumes:
-      - www:/var/www/html
-    environment:
-      - MYSQL_HOST=mysql
-      - REDIS_HOST=redis
-      - NEXTCLOUD_TRUSTED_DOMAINS=${DOMAIN}
-
-  nginx:
-    image: srvadm/system:nginx-dev
-    env_file:
-      - .env
-    volumes:
-      - www:/var/www/html
-    environment:
-      - PHP_HOST=nextcloud
-      - PHP_PORT=9000
-      - WWW_ROOT=/var/www/html
-    networks:
-      - traefik-public
-      - default
-        deploy:
-            labels:
-                - traefik.enable=true
-                - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.rule=Host(`${DOMAIN}`)
-                - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.middlewares=redirect-to-https@docker
-                - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.entrypoints=http
-                - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`${DOMAIN}`)
-                - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.entrypoints=https
-                - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.certresolver=http
-                - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls@file
-                - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80
-
   coturn:
     image: instrumentisto/coturn
-    container_name: nextcloud-coturn
-    restart: unless-stopped
     ports:
       - "3478:3478/tcp"
       - "3478:3478/udp"
-    networks:
-      - nextcloud
     command:
       - -n
       - --log-file=stdout
       - --min-port=49160
       - --max-port=49200
-      - --realm=${NEXTCLOUD_FQDN}
+      - --realm=${DOMAIN}
       - --use-auth-secret
       - --static-auth-secret=${COTURN_SECRET}
+      - --external-ip=188.68.55.168
+
+  nextcloud:
+    image: nextcloud:latest
+    depends_on:
+      - mysql
+      - redis
+    env_file:
+      - ../../data/${COMPOSE_PROJECT_NAME}/.env
+    environment:
+      - MYSQL_HOST=mysql:3306
+      - NEXTCLOUD_TRUSTED_DOMAINS=${DOMAIN}
+      - REDIS_HOST=redis
+      - TRUSTED_PROXIES=${TRAEFIK_PROXY_NETWORK}
+      - OVERWRITEPROTOCOL=https
+    volumes:
+      - ../../data/${COMPOSE_PROJECT_NAME}/nextcloud:/var/www/html:cached
+      - ../../data/${COMPOSE_PROJECT_NAME}/nextapps:/var/www/html/custom_apps:cached
+      - ../../data/${COMPOSE_PROJECT_NAME}/nextdata:/var/www/html/data:cached
+      - ../../data/${COMPOSE_PROJECT_NAME}/nextconfig:/var/www/html/config:cached
+    networks:
+      - traefik-public
+      - default
+    deploy:
+#      placement:
+#        constraints: [node.role == worker]
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      labels:
+        - traefik.enable=true
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`${DOMAIN}`)
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=https
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=http
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.options=default-tls@file
+        - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=80
+        - traefik.http.middlewares.${COMPOSE_PROJECT_NAME}-https.headers.customFrameOptionsValue=SAMEORIGIN
+        - traefik.http.middlewares.${COMPOSE_PROJECT_NAME}-https.headers.framedeny=true
+        - traefik.http.middlewares.${COMPOSE_PROJECT_NAME}-https.headers.sslredirect=true
+        - traefik.http.middlewares.${COMPOSE_PROJECT_NAME}-https.headers.stsIncludeSubdomains=true
+        - traefik.http.middlewares.${COMPOSE_PROJECT_NAME}-https.headers.stsPreload=true
+        - traefik.http.middlewares.${COMPOSE_PROJECT_NAME}-https.headers.stsSeconds=15552000
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.middlewares=${COMPOSE_PROJECT_NAME}-https@docker
+        - traefik.http.middlewares.${COMPOSE_PROJECT_NAME}-dav.redirectregex.regex=^https://(.*)/.well-known/(card|cal)dav
+        - traefik.http.middlewares.${COMPOSE_PROJECT_NAME}-dav.redirectregex.replacement=https://$${1}/remote.php/dav/
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.middlewares=${COMPOSE_PROJECT_NAME}-dav@docker
 
 volumes:
-  www:
+  nextcloud:
+    driver: "local"
+  nextapps:
+    driver: "local"
+  nextdata:
+    driver: "local"
+  nextconfig:
+    driver: "local"
   mysql:
   redis:
 
 networks:
   traefik-public:
     external: true
-  default:
-    driver: overlay
