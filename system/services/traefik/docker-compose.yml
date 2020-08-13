@@ -25,19 +25,16 @@ services:
         - traefik.http.routers.http-catchall.entrypoints=http
         - traefik.http.routers.http-catchall.middlewares=redirect-to-https
         - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.rule=Host(`traefik.${DOMAIN}`)
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.entrypoints=http
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-http.middlewares=redirect-to-https@docker
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.entrypoints=https
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.certresolver=dns
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.rule=Host(`traefik.${DOMAIN}`)
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.service=api@internal
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.middlewares=auth-${COMPOSE_PROJECT_NAME}
-        - traefik.http.middlewares.auth-${COMPOSE_PROJECT_NAME}.basicauth.users=${AUTH_USER}:${AUTH_PWD}
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.entrypoints=https
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.certresolver=dns
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.rule=Host(`traefik.${DOMAIN}`)
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.service=api@internal
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.middlewares=${COMPOSE_PROJECT_NAME}-auth
+        - traefik.http.middlewares.${COMPOSE_PROJECT_NAME}-auth.basicauth.users=${AUTH_USER}:${AUTH_PWD}
         - traefik.http.services.${COMPOSE_PROJECT_NAME}.loadbalancer.server.port=9999 # Dummy service for Swarm port detection.
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.options=default-tls@file
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].main=${DOMAIN}
-        - traefik.http.routers.${COMPOSE_PROJECT_NAME}-https.tls.domains[0].sans=*.${DOMAIN}
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.options=default-tls@file
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.domains[0].main=${DOMAIN}
+        - traefik.http.routers.${COMPOSE_PROJECT_NAME}.tls.domains[0].sans=*.${DOMAIN}
         - traefik.http.middlewares.https.headers.STSSeconds=315360000
         - traefik.http.middlewares.https.headers.browserXSSFilter=true
         - traefik.http.middlewares.https.headers.contentTypeNosniff=true
@@ -46,6 +43,8 @@ services:
         - traefik.http.middlewares.https.headers.STSIncludeSubdomains=true
         - traefik.http.middlewares.https.headers.STSPreload=true
         - traefik.http.middlewares.https.headers.SSLRedirect=true
+        - traefik.http.middlewares.no-www.redirectregex.regex=^https://www.(.*)
+        - traefik.http.middlewares.no-www.redirectregex.replacement=https://$${1}
 #        - traefik.http.middlewares.https.headers.SSLHost=file.${DOMAIN}
     command: >
       --api=true
